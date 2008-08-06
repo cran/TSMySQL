@@ -33,25 +33,25 @@ setMethod("TSconnect",   signature(drv="MySQLDriver", dbname="character"),
 
 setMethod("TSput",   signature(x="ANY", serIDs="character", con="MySQLConnection"),
    definition= function(x, serIDs, con=options()$TSconnection, ...)
-      TSdbi:::TSput.SQL(x, serIDs, con,...) )
+      TSdbi:::TSputSQL(x, serIDs, con,...) )
 
 setMethod("TSget",   signature(serIDs="character", con="MySQLConnection"),
    definition= function(serIDs, con=options()$TSconnection, ...)
-       TSdbi:::TSget.SQL(serIDs, con, ...) )
+       TSdbi:::TSgetSQL(serIDs, con, ...) )
 
 setMethod("TSdates",    signature(serIDs="character", con="MySQLConnection"),
    definition= function(serIDs, con=options()$TSconnection, ...)
-      TSdbi:::TSdates.SQL(serIDs, con, ...) )
+      TSdbi:::TSdatesSQL(serIDs, con, ...) )
 
 
 setMethod("TSdoc",   signature(x="character", con="MySQLConnection"),
    definition= function(x, con=options()$TSconnection, ...)
-        TSdbi:::TSdoc.SQL(x=x, con=con, ...) )
+        TSdbi:::TSdocSQL(x=x, con=con, ...) )
 
 setMethod("TSdescription",   signature(x="character", con="MySQLConnection"),
    definition= function(x, con=options()$TSconnection, ...)
-        TSdbi:::TSdescription.SQL(x=x, con=con, ...) )
+        TSdbi:::TSdescriptionSQL(x=x, con=con, ...) )
 
 setMethod("TSdelete", signature(serIDs="character", con="MySQLConnection"),
    definition= function(serIDs, con=options()$TSconnection, ...)
-       TSdbi:::TSdelete.SQL(serIDs=serIDs, con=con, ...) )
+       TSdbi:::TSdeleteSQL(serIDs=serIDs, con=con, ...) )
