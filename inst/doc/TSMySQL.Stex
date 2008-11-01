@@ -34,16 +34,23 @@ This will also load required packages \pkg{TSdbi}, \pkg{DBI}, \pkg{RMySQL},
 \pkg{methods}, and \pkg{tframe}. 
 Some examples below also require \pkg{zoo}, and \pkg{tseries}.
 
-The next small section of code is necessary to setup database tables. It
+The next small section of code is necessary to setup database tables that are
+used in the examples below. It
 needs to be done only once for a database and might typically be done by
-an administrator rather than an end user. A more detailed description of the
-instructions is given in the last section of this guide.
+an administrator setting up the database, rather than by an end user. 
+
 \begin{Scode}{results=hide}
 m <- dbDriver("MySQL")
 con <- dbConnect(m, dbname="test") 
 source(system.file("TSsql/CreateTables.TSsql", package = "TSdbi"))
 dbDisconnect(con)
 \end{Scode}
+
+More detailed description of the
+instructions for building the database tables is given in the vignette 
+for the \pkg{TSdbi} package. Those instruction show how to build the database
+using database utilites rather than R, which might be the way a
+system administrator would build the database.
 
 \section{Using the Database - TSdbi Functions}
 
@@ -54,8 +61,7 @@ utilities for loading data.)
 The first thing to do is to establish a connection to the database:
 
 \begin{Scode}{results=hide}
- m <- dbDriver("MySQL")
- con <- TSconnect(m, dbname="test") 
+ con <- TSconnect("MySQL", dbname="test") 
 \end{Scode}
 
 \code{TSconnect} uses \code{dbConnect} from the \pkg{DBI} package, but checks that the
@@ -220,8 +226,95 @@ require("zoo")
 
 \begin{Scode}{results=hide}
  dbDisconnect(con)
- #dbUnloadDriver(m)
 \end{Scode}
+
+\section{Examples Using Web Data}
+
+This section illustrates fetching data from a web server and loading it into the
+database. This would be a very slow way to load a database, but provides
+examples of different kinds of time series data. The fetching is done with 
+\pkg{TShistQuote} which provides a wrapper for \code{get.hist.quote} from 
+package \pkg{tseries} to give syntax consistent with the \pkg{TSdbi}.
+
+Fetching data may fail due to lack of an Interenet connection or delays. 
+
+First establish a connection to the database where data will be saved:
+\begin{Scode}
+con <- TSconnect("MySQL", dbname="test")
+\end{Scode}
+
+Now connect to the web server and fetch data:
+
+\begin{Scode}{results=verbatim}
+  require("TShistQuote")
+  Yahoo <- TSconnect("histQuote", dbname="yahoo") 
+  x <- TSget("^gspc", quote = "Close", con=Yahoo)
+  plot(x)
+  tfplot(x)
+
+  TSrefperiod(x) 
+  TSdescription(x) 
+  TSdoc(x) 
+  TSlabel(x) 
+\end{Scode}
+
+Then write the data to the local server, specifying table B for business day 
+data (using TSreplace in case the series
+is already there from running this example previously):
+
+\begin{Scode}{results=verbatim}
+   TSreplace(x,  serIDs="gspc", Table="B", con=con)
+\end{Scode}
+
+and check the saved version:
+
+\begin{Scode}{results=verbatim,fig=TRUE}
+  TSrefperiod(TSget(serIDs="gspc", con=con)) 
+  TSdescription("gspc", con=con) 
+  TSdoc("gspc", con=con)
+  TSlabel("gspc", con=con) # this is not yet supported on the db
+  tfplot(TSget(serIDs="gspc", con=con))
+\end{Scode}
+
+\begin{Scode}{results=verbatim,fig=TRUE}
+   x <- TSget("ibm", quote = c("Close", "Vol"), con=Yahoo)
+   TSreplace(x, serIDs=c("ibm.Cl", "ibm.Vol"),  con=con, Table="B",
+              TSdescription.=c("IBM Close","IBM  Volume"),
+	      TSdoc.= paste(c(
+	         "IBM  Close   retrieved on ",
+		 "IBM  Volume retrieved  on "), Sys.Date()))
+
+   z <- TSget(serIDs=c("ibm.Cl", "ibm.Vol"), 
+             TSdescription=TRUE, TSdoc=TRUE, con=con)
+   TSdescription(z)
+   TSdoc(z)
+   tfplot(z, xlab = TSdoc(z), Title = TSdescription(z))
+   tfplot(z, Title="IBM", start="2007-01-01")
+\end{Scode}
+
+\begin{Scode}{results=verbatim}
+   Oanda <- TSconnect("histQuote", dbname="oanda") 
+   x <- TSget("EUR/USD", start="2004-01-01", con=Oanda)
+   TSreplace(x, serIDs="EUR/USD", Table="D", con=con)
+\end{Scode}
+
+and check the saved version:
+
+\begin{Scode}{results=verbatim,fig=TRUE}
+   z <- TSget(serIDs="EUR/USD",TSlabel=TRUE, TSdescription=TRUE,  con=con)
+   tfplot(z, Title = TSdescription(z), ylab=TSlabel(z))
+   tfplot(z, Title = "EUR/USD", start="2007-01-01")
+   tfplot(z, Title = "EUR/USD", start="2007-03-01")
+   tfplot(z, Title = "EUR/USD", start=Sys.Date()-14, end=Sys.Date(),
+      xlab = format(Sys.Date(), "%Y"))
+\end{Scode}
+
+\begin{Scode}{results=hide}
+  dbDisconnect(con)
+  dbDisconnect(Yahoo)
+  dbDisconnect(Oanda)
+\end{Scode}
+
 
 \subsection{Examples  Using TSdbi with ets}
 
@@ -323,100 +416,6 @@ if (!inherits(conets, "try-error")) {
   }  # end if !try-error
 \end{Scode}
 
-\section{Examples Using get.hist.quote}
-
-This section illustrates fetching data from elsewhere and loading it into the
-database. This would be a very slow way to load a database, but provides
-examples of different kinds of time series data.
-
-The fetches are wrapped in \code{try()} and a flag \code{quote.ok} set
-because the fetch attempt may fail due
-to lack of an Interenet connection or delays. 
-
-\begin{Scode}
-con <- TSconnect(dbDriver("MySQL"), dbname="test")
-options(TSconnection=con)
-\end{Scode}
-\begin{Scode}{results=verbatim}
-require("tseries")
-
-quote.ok <- !inherits( try(
-     x <- get.hist.quote(instrument = "^gspc", start = "1998-01-01",quote = "Close"), silent = TRUE),
-       "try-error")
-if(quote.ok) plot(x)
-\end{Scode}
-
-\begin{Scode}{results=verbatim,fig=TRUE}
-if(quote.ok) {
-   TSrefPeriod(x) <- "Close"
-   TSreplace(x,  serIDs="gspc", Table="B", TSdescription.="gspc  Close",
-       TSdoc.= paste(
-	         "gspc  Close retrieved with get.hist.quote on ", Sys.Date()))
-
-   tfplot(TSget(serIDs="gspc"))
-   }
-\end{Scode}
-
-\begin{Scode}{results=verbatim,fig=TRUE}
-
-quote.ok <- !inherits( try(
-   x <- get.hist.quote(instrument = "ibm", quote = c("Cl", "Vol"))),
-       "try-error")
-if(quote.ok) {
-   TSreplace(x, serIDs=c("ibm.Cl", "ibm.Vol"), Table="B",
-              TSdescription.=c("IBM Close","IBM  Volume"),
-	      TSdoc.= paste(c(
-	         "IBM  Close retrieved with get.hist.quote on ",
-		 "IBM  Volume retrieved with get.hist.quote on "), Sys.Date()))
-
-   z <- TSget(serIDs=c("ibm.Cl", "ibm.Vol"), TSdescription=TRUE)
-   tfplot(z, xlab = TSdescription(z))
-   }
-\end{Scode}
-
-\begin{Scode}{results=verbatim,fig=TRUE}
-if(quote.ok) {
-   tfplot(z, Title="IBM", start="2007-01-01")
-   }
-
-   #Daily
-
-quote.ok <- !inherits( try( x <- get.hist.quote(instrument="EUR/USD", 
-           provider="oanda", start="2004-01-01")), "try-error")
-if(quote.ok) {
-   TSreplace(x, serIDs="EUR/USD", Table="D")
-
-   z <- TSget(serIDs="EUR/USD")
-   tfplot(z, Title = "EUR/USD")
-   }
-\end{Scode}
-
-\begin{Scode}{results=verbatim,fig=TRUE}
-if(quote.ok) {
-   tfplot(z, Title = "EUR/USD", start="2007-01-01")
-   }
-\end{Scode}
-
-\begin{Scode}{results=verbatim,fig=TRUE}
-if(quote.ok) {
-   tfplot(z, Title = "EUR/USD", start="2007-03-01")
-   }
-\end{Scode}
-
-\begin{Scode}{results=verbatim,fig=TRUE}
-if(quote.ok) {
-   tfplot(z, Title = "EUR/USD", start=Sys.Date()-14, end=Sys.Date(),
-      xlab = format(Sys.Date(), "%Y"))
-   }
-\end{Scode}
-
-\begin{Scode}{results=hide}
-  dbDisconnect(options()$TSconnection)
-  options(TSconnection=NULL)
-  #dbUnloadDriver(m)
-\end{Scode}
-
-
 \section{Examples Using DBI and direct SQL Queries}
 
 The following examples are queries using the underlying "DBI" functions.
@@ -457,18 +456,21 @@ so the following are wrapped in \code{try()}.
 (SQLite does not seem to support this at all.)
 
 \begin{Scode}{results=verbatim}
-  try( dbGetQuery(con, paste(
+z <-  try( dbGetQuery(con, paste(
        "SELECT COLUMN_NAME FROM INFORMATION_SCHEMA.Columns ",
        " WHERE TABLE_SCHEMA='test' AND table_name='A' ;"))  )
+if (!inherits( z, "try-error")) print(z)
 
-  try( dbGetQuery(con, paste(
+z <-  try( dbGetQuery(con, paste(
        "SELECT COLUMN_NAME, COLUMN_DEFAULT, COLLATION_NAME, DATA_TYPE,",
        "CHARACTER_SET_NAME, CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION",
  "FROM INFORMATION_SCHEMA.Columns WHERE TABLE_SCHEMA='test' AND table_name='A' ;"))  )
+if (!inherits( z, "try-error")) print(z)
 
-  try( dbGetQuery(con, paste(
+z <-  try( dbGetQuery(con, paste(
    "SELECT COLUMN_NAME, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION",
  "FROM INFORMATION_SCHEMA.Columns WHERE TABLE_SCHEMA='test' AND table_name='M';"))  )
+if (!inherits( z, "try-error")) print(z)
 
 \end{Scode}
 
@@ -483,212 +485,4 @@ options(TSconnection=NULL)
 #dbUnloadDriver(m)
 \end{Scode}
 
-
-\section{Administration: Database Table Setup}
-
-The instructions in this section can be done in R using instructions in the
-file CreateTables.TSsql in the \pkg{TSdbi} package (distributed in
-TSdbi/inst/TSsql/). A simple way to do this was illustrated
-in the Introduction. Below the plain SQL instruction are shown. These could
-be executed in the mysql standalone client. This might be convenient when
-bulk loading data. (Example makefiles might sometime be available from 
-the author.)
-
-The database tables are shown in the Table below.
-The \textsl{Meta} table is used for storing meta data about series, such as a
-description and longer documentation, and also
-includes an indication of what table the series data is stored in. To retrieve
-series it is not necessary to know which table the series is on, since this can
-be found on the \textsl{Meta} table. Putting data on the database may require specifying
-the table, if it cannot be determined from the R representation of the series.
-
-\begin{table}
-\caption{Data Tables}
-\label{tab:tables}
-\begin{center}
-\begin{tabular}{ll}
-\hline
-Table & Contents \\
-\hline
-Meta  & meta data and index to series data tables \\
-A     & annual data \\
-Q     & quarterly data \\
-M     & monthly data \\
-S     & semiannual data \\
-W     & weekly data \\
-D     & daily data \\
-B     & business data \\
-U     & minutely data \\
-I     & irregular data with a date \\
-T     & irregular data with a date and time \\
-\hline
-\end{tabular}
-\end{center}
-\end{table}
-
-The tables can be set up with the following commands. (Please note that this
-documentation is not automatically maintained, and could become out-of-date.
-The instructions in the file  TSsql/CreateTables.TSsql are tested
-automatically, and thus guaranteed to be current.)
-
-\begin{verbatim}
-DROP TABLE IF EXISTS Meta;
-
-create table Meta (
-   id          VARCHAR(40) NOT NULL,
-   tbl         CHAR(1), 
-   refPeriod   VARCHAR(10) default NULL,
-   description   TEXT,
-   documentation     TEXT,
-   PRIMARY KEY (id)
-   );
-
-DROP TABLE IF EXISTS A;
-
-create table A (
-   id	      VARCHAR(40),
-   year	      INT,
-   v    double DEFAULT  NULL
-   );
-
-DROP TABLE IF EXISTS B;
-
-create table B (
-   id	      VARCHAR(40),
-   date	      DATE,
-   period     INT,
-   v    double DEFAULT  NULL
-   );
-
-DROP TABLE IF EXISTS D;
-
-create table D (
-   id	      VARCHAR(40),
-   date	      DATE,
-   period     INT,
-   v    double DEFAULT  NULL
-   );
-
-DROP TABLE IF EXISTS M;
-
-create table M (
-   id	      VARCHAR(40),
-   year	      INT,
-   period     INT,  
-   v    double DEFAULT  NULL
-   );
-
-DROP TABLE IF EXISTS U;
-
-create table U (
-   id	      VARCHAR(40),
-   date	      DATETIME,
-   tz         VARCHAR(4),  #not tested  
-   period     INT,         
-   v    double DEFAULT  NULL
-   );
-
-DROP TABLE IF EXISTS Q;
-
-create table Q (
-   id	      VARCHAR(40),
-   year	      INT,
-   period     INT,  
-   v    double DEFAULT  NULL
-   );
-
-DROP TABLE IF EXISTS S;
-
-create table S (
-   id	      VARCHAR(40),
-   year	      INT,
-   period     INT,  
-   v    double DEFAULT  NULL
-   );
-
-DROP TABLE IF EXISTS W;
-
-create table W (
-   id	      VARCHAR(40),
-   date	      DATE,
-   period     INT,  
-   v    double DEFAULT  NULL
-   );
-
-DROP TABLE IF EXISTS I;
-
-create table I (
-   id	      VARCHAR(40),
-   date	      DATE,
-   v    double DEFAULT  NULL
-   );
-
-DROP TABLE IF EXISTS T;
-
-create table T (
-   id    VARCHAR(40),
-   date  DATETIME,
-   v     double DEFAULT  NULL
-   );
-
-\end{verbatim}
-
-Indexes can be generated as follows. (It may be
-quicker to load data before generating indices.)
-
-\begin{verbatim}
- CREATE INDEX Metaindex_tbl ON Meta (tbl);
-
- CREATE INDEX Aindex_id     ON A (id);
- CREATE INDEX Aindex_year   ON A (year);
- CREATE INDEX Bindex_id     ON B (id);
- CREATE INDEX Bindex_date   ON B (date);
- CREATE INDEX Bindex_period ON B (period);
- CREATE INDEX Dindex_id     ON D (id);
- CREATE INDEX Dindex_date   ON D (date);
- CREATE INDEX Dindex_period ON D (period);
- CREATE INDEX Mindex_id     ON M (id);
- CREATE INDEX Mindex_year   ON M (year);
- CREATE INDEX Mindex_period ON M (period);
- CREATE INDEX Uindex_id     ON U (id);
- CREATE INDEX Uindex_date   ON U (date);
- CREATE INDEX Uindex_period ON U (period);
- CREATE INDEX Qindex_id     ON Q (id);
- CREATE INDEX Qindex_year   ON Q (year);
- CREATE INDEX Qindex_period ON Q (period);
- CREATE INDEX Sindex_id     ON S (id);
- CREATE INDEX Sindex_year   ON S (year);
- CREATE INDEX Sindex_period ON S (period);
- CREATE INDEX Windex_id     ON W (id);
- CREATE INDEX Windex_date   ON W (date);
- CREATE INDEX Windex_period ON W (period);
- CREATE INDEX Iindex_id     ON I (id);
- CREATE INDEX Iindex_date   ON I (date);
-
- CREATE INDEX Tindex_id   ON T (id);
- CREATE INDEX Tindex_date ON T (date);
-\end{verbatim}
-
-In MySQL you can check table information (eg. table A ) with
-\begin{verbatim}
- describe A;
-\end{verbatim}
-
-This is generic sql way to get table information 
- but it requires read privileges on INFORMATION\_SCHEMA.Columns
- which the user may not have.
- (And SQLite does not seem to support this at all.)
-
-\begin{verbatim}
-  SELECT COLUMN_NAME, COLUMN_DEFAULT, COLLATION_NAME, DATA_TYPE,
-         CHARACTER_SET_NAME, CHARACTER_MAXIMUM_LENGTH, NUMERIC_PRECISION
-            FROM INFORMATION_SCHEMA.Columns WHERE table_name='A' ;
-\end{verbatim}
-
-In mysql data might typically be loaded into a table with command like
-\begin{verbatim}
-LOAD DATA LOCAL INFILE 'A.csv' INTO TABLE A FIELDS TERMINATED BY ',';
-\end{verbatim}
-
-Of course, the corresponding Meta table entries also need to be made.
 \end{document}

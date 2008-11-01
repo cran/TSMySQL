@@ -11,12 +11,13 @@ exportClasses(
 
 ## S4 methods
 exportMethods(
-   "print",
+   ##"print",
    "TSconnect",
    "TSget",
    "TSput",
    "TSdelete",
-   "TSdoc",
    "TSdescription",
+   "TSdoc",
+   "TSlabel",
    "TSdates"
    )

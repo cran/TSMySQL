@@ -4,19 +4,29 @@
    require("RMySQL")
    }
 
-setClass("TSMySQLConnection", contains=c("MySQLConnection","TSdbOptions")) 
-setMethod("print", "TSMySQLConnection", function(x, ...) {
-    cat("database: ", x@dbname) 
-    if (x@vintage) cat( " Has vintages." )
-    if (x@panel) cat( " Has panels." )
-    cat("\n")
-    print(class(x)) 
-    invisible(x)
-    })
+# This can be 
+#setClass("TSMySQLConnection", contains="MySQLConnection",
+#             representation=representation(TSdb="TSdb")) 
+# in which case we need 
+#new("TSMySQLConnection" , con, TSdb=new("TSdb", dbname=dbname, 
+#  	       hasVintages=dbExistsTable(con, "vintages"), 
+#  	       hasPanels  =dbExistsTable(con, "panels"))) 
+
+# or 
+setClass("TSMySQLConnection", contains=c("MySQLConnection", "TSdb"))
+
+# in which case we need 
+#new("TSMySQLConnection" , con, dbname=dbname, 
+#  	       hasVintages=dbExistsTable(con, "vintages"), 
+#  	       hasPanels  =dbExistsTable(con, "panels")) 
+
+#setMethod("print", "TSMySQLConnection", function(x, ...) {
+#    print(x@TSdb)
+#    })
 
 setMethod("TSconnect",   signature(drv="MySQLDriver", dbname="character"),
-   definition=function(drv, dbname) {
-        con <- dbConnect(drv, dbname=dbname)
+   definition=function(drv, dbname, ...) {
+        con <- dbConnect(drv, dbname=dbname, ...)
 	if(0 == length(dbListTables(con))){
 	  dbDisconnect(con)
           stop("Database ",dbname," has no tables.")
@@ -25,33 +35,49 @@ setMethod("TSconnect",   signature(drv="MySQLDriver", dbname="character"),
 	  dbDisconnect(con)
           stop("Database ",dbname," does not appear to be a TS database.")
 	  }
-	panel   <- dbExistsTable(con, "Panels")
-	vintage <- dbExistsTable(con, "Vintages")
 	new("TSMySQLConnection" , con, dbname=dbname, 
-	                      vintage=vintage, panel=panel) 
+  	       hasVintages=dbExistsTable(con, "vintages"), 
+  	       hasPanels  =dbExistsTable(con, "panels")) 
 	})
 
 setMethod("TSput",   signature(x="ANY", serIDs="character", con="MySQLConnection"),
-   definition= function(x, serIDs, con=options()$TSconnection, ...)
-      TSdbi:::TSputSQL(x, serIDs, con,...) )
+   definition= function(x, serIDs, con=getOption("TSconnection"), Table=NULL, 
+       TSdescription.=TSdescription(x), TSdoc.=TSdoc(x), TSlabel.=TSlabel(x),  
+       vintage=getOption("TSvintage"), panel=getOption("TSpanel"), ...)
+    TSdbi:::TSputSQL(x, serIDs, con, Table=Table, 
+       TSdescription.=TSdescription., TSdoc.=TSdoc.,  TSlabel.=TSlabel.,
+       vintage=vintage, panel=panel,...) )
 
 setMethod("TSget",   signature(serIDs="character", con="MySQLConnection"),
-   definition= function(serIDs, con=options()$TSconnection, ...)
-       TSdbi:::TSgetSQL(serIDs, con, ...) )
+   definition= function(serIDs, con=getOption("TSconnection"), 
+       TSrepresentation=options()$TSrepresentation,
+       tf=NULL, start=tfstart(tf), end=tfend(tf),
+       names=serIDs, TSdescription=FALSE, TSdoc=FALSE, TSlabel=FALSE,
+       vintage=getOption("TSvintage"), panel=getOption("TSpanel"), ...)
+    TSdbi:::TSgetSQL(serIDs, con, TSrepresentation=TSrepresentation,
+       tf=tf, start=start, end=end,
+       names=names, TSdescription=TSdescription, TSdoc=TSdoc, TSlabel=TSlabel,
+       vintage=vintage, panel=panel, ...) )
 
 setMethod("TSdates",    signature(serIDs="character", con="MySQLConnection"),
-   definition= function(serIDs, con=options()$TSconnection, ...)
-      TSdbi:::TSdatesSQL(serIDs, con, ...) )
+   definition= function(serIDs, con=getOption("TSconnection"),  
+       vintage=getOption("TSvintage"), panel=getOption("TSpanel"), ...)
+     TSdbi:::TSdatesSQL(serIDs, con, vintage=vintage, panel=panel, ...) )
 
-
-setMethod("TSdoc",   signature(x="character", con="MySQLConnection"),
-   definition= function(x, con=options()$TSconnection, ...)
-        TSdbi:::TSdocSQL(x=x, con=con, ...) )
 
 setMethod("TSdescription",   signature(x="character", con="MySQLConnection"),
-   definition= function(x, con=options()$TSconnection, ...)
+   definition= function(x, con=getOption("TSconnection"), ...)
         TSdbi:::TSdescriptionSQL(x=x, con=con, ...) )
 
+setMethod("TSdoc",   signature(x="character", con="MySQLConnection"),
+   definition= function(x, con=getOption("TSconnection"), ...)
+        TSdbi:::TSdocSQL(x=x, con=con, ...) )
+
+setMethod("TSlabel",   signature(x="character", con="MySQLConnection"),
+   definition= function(x, con=getOption("TSconnection"), ...)
+        TSdbi:::TSlabelSQL(x=x, con=con, ...) )
+
 setMethod("TSdelete", signature(serIDs="character", con="MySQLConnection"),
-   definition= function(serIDs, con=options()$TSconnection, ...)
-       TSdbi:::TSdeleteSQL(serIDs=serIDs, con=con, ...) )
+   definition= function(serIDs, con=getOption("TSconnection"),  
+   vintage=getOption("TSvintage"), panel=getOption("TSpanel"), ...)
+  TSdbi:::TSdeleteSQL(serIDs=serIDs, con=con, vintage=vintage, panel=panel, ...) )

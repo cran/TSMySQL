@@ -3,24 +3,32 @@
 \alias{TSget,character,MySQLConnection-method}
 \alias{TSput,ANY,character,MySQLConnection-method}
 \alias{TSdelete,character,MySQLConnection-method}
-\alias{TSdoc,character,MySQLConnection-method}
 \alias{TSdescription,character,MySQLConnection-method}
+\alias{TSdoc,character,MySQLConnection-method}
+\alias{TSlabel,character,MySQLConnection-method}
 \alias{TSdates,character,MySQLConnection-method}
-\alias{print,TSMySQLConnection-method}
 
 \alias{TSMySQLConnection-class}
 
 \title{TSdbi MySQL Methods}
 \description{Methods for TSdbi MySQL time series dtabase connection.}
 \usage{
-    \S4method{TSconnect}{MySQLDriver,character}(drv, dbname)
-    \S4method{TSget}{character,MySQLConnection}(serIDs, con,   ...)
-    \S4method{TSput}{ANY,character,MySQLConnection}(x, serIDs, con,  ...)
-    \S4method{TSdates}{character,MySQLConnection}(serIDs, con, ...)
-    \S4method{TSdelete}{character,MySQLConnection}(serIDs, con, ...)
+    \S4method{TSconnect}{MySQLDriver,character}(drv, dbname, ...)
+    \S4method{TSget}{character,MySQLConnection}(serIDs, con, 
+       TSrepresentation=options()$TSrepresentation,
+       tf=NULL, start=tfstart(tf), end=tfend(tf),
+       names=serIDs, TSdescription=FALSE, TSdoc=FALSE, TSlabel=FALSE,
+       vintage=getOption("TSvintage"), panel=getOption("TSpanel"),   ...)
+    \S4method{TSput}{ANY,character,MySQLConnection}(x, serIDs, con, Table=NULL, 
+       TSdescription.=TSdescription(x), TSdoc.=TSdoc(x), TSlabel.=TSlabel(x),  
+       vintage=getOption("TSvintage"), panel=getOption("TSpanel"),  ...)
+    \S4method{TSdates}{character,MySQLConnection}(serIDs, con,  
+       vintage=getOption("TSvintage"), panel=getOption("TSpanel"), ...)
+    \S4method{TSdelete}{character,MySQLConnection}(serIDs, con,  
+   vintage=getOption("TSvintage"), panel=getOption("TSpanel"), ...)
     \S4method{TSdescription}{character,MySQLConnection}(x, con, ...)
     \S4method{TSdoc}{character,MySQLConnection}(x, con, ...)
-    \S4method{print}{TSMySQLConnection}(x, ...)
+    \S4method{TSlabel}{character,MySQLConnection}(x, con, ...)
 }
 \arguments{
     \item{drv}{A MySQLDriver.}
@@ -30,6 +38,24 @@
     \item{x}{data series to put on the database, or a series identifier for
        TSdescription and TSdoc or, for print, 
        a database connection as returned by TSconnect.}
+    \item{TSrepresentation}{time series representation to use for the result.}
+    \item{names}{Optional character vector to use for series names.}
+    \item{tf}{Optional tframe to use for truncating data. (See \code{tfwindow}.)}
+    \item{start}{Optional start date to use for truncating data. (See \code{tfwindow}.)}
+    \item{end}{Optional end date to use for truncating data. (See \code{tfwindow}.)}
+    \item{TSdescription}{TRUE or FALSE indicating whether description 
+       should be extracted}
+    \item{TSdescription.}{Description to put on the database.}
+    \item{TSdoc}{TRUE or FALSE indicating whether documentation 
+       should be extracted.}
+    \item{TSdoc.}{Documentation to put on the database.}
+    \item{TSlabel}{TRUE or FALSE indicating whether series label 
+       should be extracted.}
+    \item{TSlabel.}{Short series label to put on the database.}
+    \item{Table}{Database table indication (necessary if it cannot be
+         determined automatically).}
+    \item{vintage}{Vintage to be supplied (if supported by db).}
+    \item{panel}{Panel to be supplied (if supported by db).}
     \item{...}{Arguments passed to other methods.}
 }
 \value{depends.}
