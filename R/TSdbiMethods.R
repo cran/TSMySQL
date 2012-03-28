@@ -15,6 +15,9 @@
 # or 
 setClass("TSMySQLConnection", contains=c("MySQLConnection", "conType", "TSdb"))
 
+setAs("TSMySQLConnection", "integer", 
+  def=getMethod("coerce", c("dbObjectId","integer"))) 
+
 # in which case we need 
 #new("TSMySQLConnection" , con, drv="MySQL", dbname=dbname, 
 #  	       hasVintages=dbExistsTable(con, "vintages"), 
@@ -94,7 +97,7 @@ setMethod("TSvintages",
    signature(con="TSMySQLConnection"),
    definition=function(con) {
      if(!con@hasVintages) NULL else   
-     dbGetQuery(con,"SELECT  DISTINCT(vintage) FROM  vintages;" )$vintage
+     sort(dbGetQuery(con,"SELECT  DISTINCT(vintage) FROM  vintages;" )$vintage)
      } )
 
 # this method will generally not be needed by users, but is used in the test

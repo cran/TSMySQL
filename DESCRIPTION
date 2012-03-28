@@ -1,5 +1,5 @@
 Package: TSMySQL
-Version: 2011.11-1
+Version: 2012.3-1
 Title: Time Series Database Interface extensions for MySQL
 Description: TSMySQL provides a MySQL interface for TSdbi.
 Depends: R (>= 2.8.0), methods, tframe, tframePlus, TSdbi (>=
@@ -12,8 +12,6 @@ License: GPL-2 | file LICENSE
 Author: Paul Gilbert <pgilbert.ttv9z@ncf.ca>
 Maintainer: Paul Gilbert <pgilbert.ttv9z@ncf.ca>
 URL: http://tsdbi.r-forge.r-project.org/
+Packaged: 2012-03-28 15:34:30 UTC; paul
 Repository: CRAN
-Repository/R-Forge/Project: tsdbi
-Repository/R-Forge/Revision: 282
-Date/Publication: 2011-11-02 17:17:15
-Packaged: 2011-10-29 20:55:07 UTC; rforge
+Date/Publication: 2012-03-29 18:20:56
