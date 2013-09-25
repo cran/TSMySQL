@@ -74,7 +74,12 @@
 \value{depends.}
 \details{
 These are MySQL methods for \pkg{TSdbi}. See the \pkg{TSdbi} for details and
-see the vignette distributed with this package for more complete examples.
+see the vignette distributed with package \pkg{TSdata} for more complete 
+examples. 
+Package \pkg{TSsql} is required for functions createTSdbTables() and
+removeTSdbTables().
+Typically createTSdbTables() will only be done once, and the tables
+will not be removed. These steps are done in the example below.
 }
 
 \seealso{ 
@@ -84,8 +89,11 @@ see the vignette distributed with this package for more complete examples.
 }
 \examples{
     require("tfplot")
-    con <- try(TSconnect(dbDriver("MySQL"), dbname="test"))
-    if(! inherits(con, "try-error")) {
+    conInit <- try(dbConnect(dbDriver("MySQL"), dbname="test"))
+    if(! inherits(conInit, "try-error")) {
+      require("TSsql")
+      createTSdbTables(conInit, index=FALSE)
+      con <- TSconnect(dbDriver("MySQL"), dbname="test")
       z <- ts(rnorm(100), start=c(1975,1), frequency=12)
       seriesNames(z) <- "random1"
       if(TSexists("random1", con)) TSreplace(z, con) else
@@ -95,8 +103,7 @@ see the vignette distributed with this package for more complete examples.
       z <- ts(matrix(rnorm(100),50,2), start=c(1975,1), frequency=4)
       seriesNames(z) <- c("random2","random3")
       if(TSexists("random2", con) |
-         TSexists("random3", con) ) TSreplace(z, con) else
-      TSput(z, con)
+         TSexists("random3", con) ) TSreplace(z, con) else TSput(z, con)
       z2 <- TSget("random2", con)
       tfplot(z2)
       TSdates("D1", con)
@@ -110,6 +117,7 @@ see the vignette distributed with this package for more complete examples.
       TSmeta("random2")
       TSdelete("random1", con)
       TSdelete("random2")
+       \dontshow{removeTSdbTables(con, yesIknowWhatIamDoing=TRUE)} 
       }
     con <- try(TSconnect(dbDriver("MySQL"), dbname="ets"))
     if(! inherits(con, "try-error")) {
