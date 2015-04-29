@@ -2,6 +2,30 @@ See also
 
    o	See also NEWS in the TSdbi package.
 
+Known Bugs
+
+   o	Representation timeSeries loses time information for ts objects. (This
+   	seems to be a bug in package timeSeries.)
+
+
+Changes in TSMySQL version 2015.4-1
+
+   o	Bumped requirement for RMySQL up to version 0.10.3 or greater.
+
+   o	Moved tests to inst/testWithMySQLserver and inst/testWithInternet.
+
+
+Changes in TSMySQL version 2015.1-1
+
+   o	Changed Depends to Imports for RMySQL
+
+   o	Bumped requirement for DBI up to version 0.3.1 or greater.
+
+   o	Adjusted TSconnect() to use a string or a connection in place of a
+   	driver, and renamed argument drv to q to reflect this change.
+
+   o	Removed dropTStable() from the API. It is now handled by 
+   	removeTSdbTables() in package TSsql.
 
 Changes in TSMySQL version 2013.9-1
 

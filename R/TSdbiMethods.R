@@ -1,17 +1,15 @@
+MySQL <- function(...){
+  args <- pmatch(names(list(...)), names(formals(RMySQL::MySQL)) )
+  do.call(RMySQL::MySQL, list(...)[!is.na(args)])
+  }
 
-# This can be 
-#setClass("TSMySQLConnection", contains="MySQLConnection",
-#             representation=representation(TSdb="TSdb")) 
-# in which case we need 
-#new("TSMySQLConnection" , con, TSdb=new("TSdb", dbname=dbname, 
-#  	       hasVintages=dbExistsTable(con, "vintages"), 
-#  	       hasPanels  =dbExistsTable(con, "panels"))) 
-
-# or 
 setClass("TSMySQLConnection", contains=c("MySQLConnection", "conType", "TSdb"))
 
-setAs("TSMySQLConnection", "integer", 
-  def=getMethod("coerce", c("dbObjectId","integer"))) 
+# works  with both pre-release 2015.1 and older versions of RMySQL
+# but setAs really should not be needed
+#setAs("TSMySQLConnection", "integer",
+# def = function(from) as(slot(from,"Id"), "integer")
+# )
 
 # in which case we need 
 #new("TSMySQLConnection" , con, drv="MySQL", dbname=dbname, 
@@ -22,18 +20,21 @@ setAs("TSMySQLConnection", "integer",
 #    print(x@TSdb)
 #    })
 
-setMethod("TSconnect",   signature(drv="MySQLDriver", dbname="character"),
-   definition=function(drv, dbname, ...) {
-        con <- dbConnect(drv, dbname=dbname, ...)
+#class(getExportedValue("RMySQL", "MySQL")()) is "MySQLDriver"
+
+setMethod("TSconnect",   signature(q="MySQLConnection", dbname="missing"),
+   definition=function(q, dbname, ...) {
+        con <- q
+	nm <- as.character(dbGetQuery(conn=con, "SELECT DATABASE();"))
 	if(0 == length(dbListTables(con))){
 	  dbDisconnect(con)
-          stop("Database ",dbname," has no tables.")
+          stop("Database ",nm," has no tables.")
 	  }
 	if(!dbExistsTable(con, "Meta")){
 	  dbDisconnect(con)
-          stop("Database ",dbname," does not appear to be a TS database.")
+          stop("Database ",nm," does not appear to be a TS database.")
 	  }
-	new("TSMySQLConnection" , con, drv="MySQL", dbname=dbname, 
+	new("TSMySQLConnection" , con, dbname=nm, 
   	       hasVintages=dbExistsTable(con, "vintageAlias"), 
   	       hasPanels  =dbExistsTable(con, "panels")) 
 	})
@@ -94,17 +95,3 @@ setMethod("TSvintages",
      if(!con@hasVintages) NULL else   
      sort(dbGetQuery(con,"SELECT  DISTINCT(vintage) FROM  vintages;" )$vintage)
      } )
-
-# this method will generally not be needed by users, but is used in the test
-# database setup. It needs to be generic in order to work around the problem
-# that different db engines treat capitalized table names differently.
-# e.g. MySQL uses table name Meta while Posgresql converts to meta.
-# A default con is not used on purpose.
-setMethod("dropTStable", 
-   signature(con="MySQLConnection", Table="character", yesIknowWhatIamDoing="ANY"),
-   definition= function(con=NULL, Table, yesIknowWhatIamDoing=FALSE){
-    if((!is.logical(yesIknowWhatIamDoing)) || !yesIknowWhatIamDoing)
-      stop("See ?dropTStable! You need to know that you may be doing serious damage.")
-    if(dbExistsTable(con, Table)) dbRemoveTable(con, Table)
-    return(TRUE)
-    } )

@@ -7,8 +7,9 @@ import("tframe")
 import("RMySQL") ## this should not all be needed, but parts for setClass "TSMySQLConnection"
 ##importClassesFrom("RMySQL","MySQLConnection")
 
-## many function from TSdbi need to be visible to the user, so it is indicated
-## using Depends: in NAMESPACE rather than importing and exporting here.
+## not generic
+export(
+  "MySQL")
 
 ## S4 Classes
 exportClasses(
@@ -27,6 +28,5 @@ exportMethods(
    "TSlabel",
    "TSsource",
    "TSdates",
-   "TSvintages",
-   "dropTStable"
+   "TSvintages"
    )

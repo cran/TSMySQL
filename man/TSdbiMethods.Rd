@@ -1,5 +1,7 @@
 \name{TSdbiMethods}
-\alias{TSconnect,MySQLDriver,character-method}
+\alias{MySQL}
+
+\alias{TSconnect,MySQLConnection,missing-method}
 \alias{TSget,character,TSMySQLConnection-method}
 \alias{TSput,ANY,character,TSMySQLConnection-method}
 \alias{TSdelete,character,TSMySQLConnection-method}
@@ -9,15 +11,14 @@
 \alias{TSsource,character,TSMySQLConnection-method}
 \alias{TSdates,character,TSMySQLConnection-method}
 \alias{TSvintages,TSMySQLConnection-method}
-\alias{dropTStable,MySQLConnection,character,ANY-method}
-\alias{dropTStable,MySQLConnection,character-method}
 
 \alias{TSMySQLConnection-class}
 
 \title{TSdbi MySQL Methods}
 \description{Methods for TSdbi MySQL time series dtabase connection.}
 \usage{
-    \S4method{TSconnect}{MySQLDriver,character}(drv, dbname, ...)
+    MySQL(...)
+    \S4method{TSconnect}{MySQLConnection,missing}(q, dbname, ...)
     \S4method{TSget}{character,TSMySQLConnection}(serIDs, con, 
        TSrepresentation=options()$TSrepresentation,
        tf=NULL, start=tfstart(tf), end=tfend(tf), names=NULL, 
@@ -36,12 +37,12 @@
     \S4method{TSlabel}{character,TSMySQLConnection}(x, con, ...)
     \S4method{TSsource}{character,TSMySQLConnection}(x, con, ...)
     \S4method{TSvintages}{TSMySQLConnection}(con)
-    \S4method{dropTStable}{MySQLConnection,character,ANY}(con, Table, 
-                           yesIknowWhatIamDoing=FALSE)
 }
 \arguments{
-    \item{drv}{A MySQLDriver.}
-    \item{dbname}{A character string indicating a database name.}
+    \item{q}{A character string indicating the query interface to use, or
+         a database connection object.}
+    \item{dbname}{The name of the database to which the connection should be
+         established, omitted if \code{q} is a database connection object.}
     \item{con}{A database connection.}
     \item{serIDs}{identifiers for series to extract.}
     \item{x}{data series to put on the database, or a series identifier for
@@ -68,8 +69,7 @@
     	necessary if it cannot be determined automatically).}
     \item{vintage}{Vintage to be supplied (if supported by db).}
     \item{panel}{Panel to be supplied (if supported by db).}
-    \item{yesIknowWhatIamDoing}{logical to help prevent accidents.}
-    \item{...}{Arguments passed to other methods.}
+    \item{...}{Arguments passed to other methods or to RMySQL::MySQL}
 }
 \value{depends.}
 \details{
@@ -89,11 +89,10 @@ will not be removed. These steps are done in the example below.
 }
 \examples{
     require("tfplot")
-    conInit <- try(dbConnect(dbDriver("MySQL"), dbname="test"))
-    if(! inherits(conInit, "try-error")) {
-      require("TSsql")
-      createTSdbTables(conInit, index=FALSE)
-      con <- TSconnect(dbDriver("MySQL"), dbname="test")
+    \dontrun{
+      conInit <- RMySQL::dbConnect(RMySQL::MySQL(), dbname="test")
+      TSsql::createTSdbTables(conInit, index=FALSE)
+      con <- TSconnect("MySQL", dbname="test")
       z <- ts(rnorm(100), start=c(1975,1), frequency=12)
       seriesNames(z) <- "random1"
       if(TSexists("random1", con)) TSreplace(z, con) else
@@ -117,26 +116,26 @@ will not be removed. These steps are done in the example below.
       TSmeta("random2")
       TSdelete("random1", con)
       TSdelete("random2")
-       \dontshow{removeTSdbTables(con, yesIknowWhatIamDoing=TRUE)} 
-      }
-    con <- try(TSconnect(dbDriver("MySQL"), dbname="ets"))
-    if(! inherits(con, "try-error")) {
-      TSmeta("B103", con)
-      z1 <- TSget("B103", con)
-      tfplot(z1)
-      z2 <- TSget(c("B103", "B104"), con)
-      tfplot(z2)
-      options(TSconnection=con)
-      TSmeta("B103")
-      z2 <- TSget(c("B103","B104"))
-      TSmeta(z2)
-      TSdates("D1", con)
-      TSdates("B103", con)
-      TSdates(c("D1","B103","B104"), con)
-      z <- TSdates(c("D1","B103","B104"))
-      print(z)
-      start(z)
-      end(z)
+      TSsql::removeTSdbTables(con, yesIknowWhatIamDoing=TRUE)
+      con <- try(TSconnect("MySQL", dbname="ets"))
+      if(!inherits(con, "try-error")){
+          TSmeta("B103", con)
+          z1 <- TSget("B103", con)
+          tfplot(z1)
+          z2 <- TSget(c("B103", "B104"), con)
+          tfplot(z2)
+          options(TSconnection=con)
+          TSmeta("B103")
+          z2 <- TSget(c("B103","B104"))
+          TSmeta(z2)
+          TSdates("D1", con)
+          TSdates("B103", con)
+          TSdates(c("D1","B103","B104"), con)
+          z <- TSdates(c("D1","B103","B104"))
+          print(z)
+          start(z)
+          end(z)
+          }
       }
 }
 \keyword{ts}
